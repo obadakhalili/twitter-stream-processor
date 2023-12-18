@@ -19,7 +19,7 @@
 - You can run the consumer and listen for incoming messages using the command:
 
   ```
-  ~/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic TutorialTopic --from-beginning
+  ~/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic tweets-stream --from-beginning
   ```
 
 - `cd` into `stream-producer` and run the Python `producer.py` script to start streaming tweets.

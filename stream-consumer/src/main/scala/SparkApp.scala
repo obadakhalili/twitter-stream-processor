@@ -5,24 +5,19 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.Trigger
 
 object SparkApp {
-
   def main(args: Array[String]): Unit = {
-
-    // Configure logger to suppress unnecessary logging
     Logger.getLogger("org").setLevel(org.apache.log4j.Level.ERROR)
     Logger.getLogger("akka").setLevel(org.apache.log4j.Level.ERROR)
     
-    // Create Spark session
     val spark = SparkSession
       .builder()
       .master("local[8]")
       .appName("SparkApp")
-      .config("spark.mongodb.output.uri", "mongodb://127.0.0.1/tweets_insights_db.tweets_insights")
+      .config("spark.mongodb.output.uri", "mongodb://127.0.0.1/tweets_insights_db")
       .getOrCreate()
 
     import spark.implicits._
 
-    // Define the DataFrame for reading from Kafka
     val kafkaDF = spark
       .readStream
       .format("kafka")
@@ -33,30 +28,32 @@ object SparkApp {
       .select(json_tuple($"value", "id", "date", "user", "text", "retweets"))
       .toDF("id", "date", "user", "text", "retweets")
 
-    // Process and write insights for each micro-batch
-    val query = kafkaDF.writeStream
-      .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-        // Example insights from the batch
-        val tweetsByUser = batchDF.groupBy("user").count()
-        val avgRetweets = batchDF.agg(avg($"retweets"))
-        val recentTweets = batchDF.orderBy($"date".desc).limit(10)
+    val storagePath = "./tweets-storage"
 
-        // Function to write insights to MongoDB
-        def writeToMongoDB(df: DataFrame, collection: String): Unit = {
-          df.write
-            .format("mongo")
-            .option("collection", collection)
-            .mode("append")
-            .save()
-        }
+    val reprocessQuery = kafkaDF.writeStream
+      .foreachBatch { (batchDF: DataFrame) =>
+        batchDF.write.mode("append").parquet(storagePath)
 
-        // Write each insight to a separate collection in MongoDB
-        writeToMongoDB(tweetsByUser, "tweetsByUser")
-        writeToMongoDB(avgRetweets, "avgRetweets")
-        writeToMongoDB(recentTweets, "recentTweets")
+        val accumulatedDF = spark.read.parquet(storagePath)
+
+        val avgRetweets = accumulatedDF.agg(avg($"retweets"))
+        val maxRetweets = accumulatedDF.agg(max($"retweets"))
+        val tweetCount = accumulatedDF.agg(count($"id"))
+
+        val insightsDF = Seq(
+          ("avgRetweets", avgRetweets.toJSON.collect().mkString("[", ",", "]")),
+          ("maxRetweets", maxRetweets.toJSON.collect().mkString("[", ",", "]")),
+          ("tweetCount", tweetCount.toJSON.collect().mkString("[", ",", "]")),
+        ).toDF("type", "data")
+
+        insightsDF.write
+          .format("mongo")
+          .option("collection", "tweets_insights")
+          .mode("overwrite")
+          .save()
       }
       .start()
 
-    query.awaitTermination()
+    reprocessQuery.awaitTermination()
   }
 }
