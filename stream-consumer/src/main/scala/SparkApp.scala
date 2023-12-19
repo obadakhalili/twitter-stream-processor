@@ -36,15 +36,13 @@ object SparkApp {
 
         val accumulatedDF = spark.read.parquet(storagePath)
 
-        val avgRetweets = accumulatedDF.agg(avg($"retweets"))
-        val maxRetweets = accumulatedDF.agg(max($"retweets"))
-        val tweetCount = accumulatedDF.agg(count($"id"))
+        val avgRetweets = accumulatedDF.agg(avg($"retweets").as("avg_retweets"))
+        val maxRetweets = accumulatedDF.agg(max($"retweets").as("max_retweets"))
+        val tweetCount = accumulatedDF.agg(count($"id").as("tweets_count"))
 
-        val insightsDF = Seq(
-          ("avgRetweets", avgRetweets.toJSON.collect().mkString("[", ",", "]")),
-          ("maxRetweets", maxRetweets.toJSON.collect().mkString("[", ",", "]")),
-          ("tweetCount", tweetCount.toJSON.collect().mkString("[", ",", "]")),
-        ).toDF("type", "data")
+        val insightsDF = avgRetweets
+          .join(maxRetweets)
+          .join(tweetCount)
 
         insightsDF.write
           .format("mongo")
