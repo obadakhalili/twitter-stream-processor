@@ -31,7 +31,7 @@ object SparkApp {
     val storagePath = "./tweets-storage"
 
     val reprocessQuery = kafkaDF.writeStream
-      .foreachBatch { (batchDF: DataFrame) =>
+      .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
         batchDF.write.mode("append").parquet(storagePath)
 
         val accumulatedDF = spark.read.parquet(storagePath)
