@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tweet Insights</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
+      integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
+      crossorigin="anonymous"
+    ></script>
+    <script type="text/javascript" charset="utf-8">
+      const socket = io();
+      socket.on("new_insights", (insights) => {
+        document.getElementById("avg_retweets").innerText =
+          insights.avg_retweets;
+        document.getElementById("max_retweets").innerText =
+          insights.max_retweets;
+        document.getElementById("tweets_count").innerText =
+          insights.tweets_count;
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Tweet Insights</h1>
+    <div>
+      <p>Average Retweets: <span id="avg_retweets"></span></p>
+      <p>Max Retweets: <span id="max_retweets"></span></p>
+      <p>Total Tweets Count: <span id="tweets_count"></span></p>
+    </div>
+  </body>
+</html>
