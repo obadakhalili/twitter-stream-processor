@@ -1,4 +1,4 @@
-# Twitter Stream Producer
+# Twitter Stream Processor
 
 - Install and setup Kafka and Zookeeper following the steps in the article https://hevodata.com/blog/how-to-install-kafka-on-ubuntu/.
 
