@@ -19,7 +19,14 @@ def index():
 
 def send_insights():
     insights = collection.find_one(
-        {}, {"_id": 0, "avg_retweets": 1, "max_retweets": 1, "tweets_count": 1}
+        {},
+        {
+            "_id": 0,
+            "avg_retweets": 1,
+            "max_retweets": 1,
+            "tweets_count": 1,
+            "top_users": 1,
+        },
     )
     socketio.emit("new_insights", insights)
 

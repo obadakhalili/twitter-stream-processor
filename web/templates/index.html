@@ -7,8 +7,85 @@
       integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
       crossorigin="anonymous"
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        color: #333;
+      }
+      .container {
+        width: 80%;
+        margin: auto;
+        overflow: hidden;
+      }
+      header {
+        background: #50b3a2;
+        color: #fff;
+        padding-top: 30px;
+        min-height: 70px;
+        border-bottom: #e8491d 3px solid;
+      }
+      header a {
+        color: #fff;
+        text-decoration: none;
+        text-transform: uppercase;
+        font-size: 16px;
+      }
+      header ul {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        overflow: hidden;
+      }
+      header li {
+        float: left;
+        display: inline;
+        padding: 0 20px 0 20px;
+      }
+      header #branding {
+        float: left;
+      }
+      header #branding h1 {
+        margin: 0;
+      }
+      header nav {
+        float: right;
+        margin-top: 10px;
+      }
+      header .highlight,
+      header .current a {
+        color: #e8491d;
+        font-weight: bold;
+      }
+      header a:hover {
+        color: #ffffff;
+        font-weight: bold;
+      }
+      .insights {
+        padding: 15px;
+        background: #fff;
+        margin-top: 15px;
+        border: 1px solid #e6e6e6;
+        box-shadow: 0px 5px 5px #e6e6e6;
+      }
+      .insights h2,
+      .insights p {
+        text-align: center;
+      }
+      canvas {
+        padding: 15px;
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
     <script type="text/javascript" charset="utf-8">
       const socket = io();
+      let pieChart = null;
+      let lineChart = null;
+
       socket.on("new_insights", (insights) => {
         document.getElementById("avg_retweets").innerText =
           insights.avg_retweets;
@@ -16,15 +93,146 @@
           insights.max_retweets;
         document.getElementById("tweets_count").innerText =
           insights.tweets_count;
+
+        const userLabels = insights.top_users.map((user) => user.user);
+        const tweetCounts = insights.top_users.map((user) => user.tweet_count);
+
+        const ctx = document.getElementById("topUsersChart").getContext("2d");
+
+        if (pieChart) {
+          pieChart.data.labels = userLabels;
+          pieChart.data.datasets[0].data = tweetCounts;
+          pieChart.update();
+        } else {
+          pieChart = new Chart(ctx, {
+            type: "pie",
+            data: {
+              labels: userLabels,
+              datasets: [
+                {
+                  label: "Tweet Count",
+                  data: tweetCounts,
+                  backgroundColor: generateColors(tweetCounts.length),
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: "top",
+                },
+                title: {
+                  display: true,
+                  text: "Top 20 Users by Tweet Count",
+                },
+              },
+            },
+          });
+        }
+
+        insights.tweets_over_time = [
+          { date: "2023-01-01", tweet_count: 120 },
+          { date: "2023-01-02", tweet_count: 75 },
+          { date: "2023-01-03", tweet_count: 200 },
+          { date: "2023-01-04", tweet_count: 90 },
+          { date: "2023-01-05", tweet_count: 150 },
+          // ... more data ...
+        ];
+
+        if (insights.tweets_over_time && insights.tweets_over_time.length > 0) {
+          const dates = insights.tweets_over_time.map((entry) => entry.date);
+          const tweetCounts = insights.tweets_over_time.map(
+            (entry) => entry.tweet_count
+          );
+
+          const ctxLine = document
+            .getElementById("tweetsOverTimeChart")
+            .getContext("2d");
+
+          if (lineChart) {
+            lineChart.data.labels = dates;
+            lineChart.data.datasets[0].data = tweetCounts;
+            lineChart.update();
+          } else {
+            lineChart = new Chart(ctxLine, {
+              type: "line",
+              data: {
+                labels: dates,
+                datasets: [
+                  {
+                    label: "Number of Tweets",
+                    data: tweetCounts,
+                    borderColor: "#007bff",
+                    backgroundColor: "rgba(0, 123, 255, 0.5)",
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                title: {
+                  display: true,
+                  text: "Tweet Distribution Over Time",
+                },
+                scales: {
+                  xAxes: [
+                    {
+                      type: "time",
+                      time: {
+                        unit: "day",
+                        tooltipFormat: "ll",
+                      },
+                    },
+                  ],
+                  yAxes: [
+                    {
+                      ticks: {
+                        beginAtZero: true,
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+          }
+        }
       });
+
+      function generateColors(count) {
+        return Array.from(
+          { length: count },
+          () => `hsla(${Math.random() * 360}, 100%, 75%, 0.5)`
+        );
+      }
     </script>
   </head>
   <body>
-    <h1>Tweet Insights</h1>
-    <div>
-      <p>Average Retweets: <span id="avg_retweets"></span></p>
-      <p>Max Retweets: <span id="max_retweets"></span></p>
-      <p>Total Tweets Count: <span id="tweets_count"></span></p>
+    <header>
+      <div class="container">
+        <div id="branding">
+          <h1><span class="highlight">Tweet</span> Insights</h1>
+        </div>
+        <nav>
+          <ul>
+            <li class="current"><a href="#">Home</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="insights">
+        <h2>Twitter Data Analysis</h2>
+        <p>Average Retweets: <span id="avg_retweets"></span></p>
+        <p>Max Retweets: <span id="max_retweets"></span></p>
+        <p>Total Tweets Count: <span id="tweets_count"></span></p>
+      </div>
+      <div style="width: 600px; height: 600px; margin: auto; margin-top: 80px">
+        <canvas id="topUsersChart" width="400" height="400"></canvas>
+      </div>
+      <div style="width: 600px; height: 600px; margin: auto; margin-top: 80px">
+        <canvas id="tweetsOverTimeChart"></canvas>
+      </div>
     </div>
   </body>
 </html>

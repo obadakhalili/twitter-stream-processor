@@ -4,6 +4,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.Trigger
 
+case class TopUser(user: String, tweet_count: Long)
+
 object SparkApp {
   def main(args: Array[String]): Unit = {
     Logger.getLogger("org").setLevel(org.apache.log4j.Level.ERROR)
@@ -39,10 +41,17 @@ object SparkApp {
         val avgRetweets = accumulatedDF.agg(avg($"retweets").as("avg_retweets"))
         val maxRetweets = accumulatedDF.agg(max($"retweets").as("max_retweets"))
         val tweetCount = accumulatedDF.agg(count($"id").as("tweets_count"))
+        val topUsers = accumulatedDF.groupBy("user")
+          .agg(count("user").alias("tweet_count"))
+          .orderBy(desc("tweet_count"))
+          .limit(20)
+          .as[TopUser]
+          .collect()
 
         val insightsDF = avgRetweets
           .join(maxRetweets)
           .join(tweetCount)
+          .withColumn("top_users", typedLit(topUsers))
 
         insightsDF.write
           .format("mongo")
