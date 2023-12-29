@@ -18,9 +18,12 @@ with zipfile.ZipFile("./data/tweets.csv.zip", "r") as z:
                 line = line.replace("'", '"')
                 attribute_details = line.strip().split(",")
 
+                date_tokens = attribute_details[2].split(" ")
+                date = f"{date_tokens[5]}-{date_tokens[1]}-{date_tokens[2]}"
+
                 tweet = {
                     "id": attribute_details[1],
-                    "date": int(time.time() * 1000),
+                    "date": date,
                     "user": attribute_details[4],
                     "text": attribute_details[5],
                     "retweets": int(random.random() * 10),

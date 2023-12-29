@@ -26,8 +26,23 @@ def send_insights():
             "max_retweets": 1,
             "tweets_count": 1,
             "top_users": 1,
+            "tweets_distribution": 1,
         },
     )
+
+    if insights is None:
+        return
+
+    insights["top_users"] = [
+        {"user": user["_1"], "tweets_count": user["_2"]}
+        for user in insights["top_users"]
+    ]
+
+    insights["tweets_distribution"] = [
+        {"date": date["_1"], "tweets_count": date["_2"]}
+        for date in insights["tweets_distribution"]
+    ]
+
     socketio.emit("new_insights", insights)
 
 

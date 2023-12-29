@@ -75,10 +75,19 @@
       .insights p {
         text-align: center;
       }
+      .charts-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .chart {
+        flex: 1;
+        max-width: 50%;
+        padding: 10px;
+      }
       canvas {
-        padding: 15px;
-        max-width: 100%;
-        height: auto;
+        width: 100% !important;
+        height: auto !important;
       }
     </style>
     <script type="text/javascript" charset="utf-8">
@@ -95,7 +104,7 @@
           insights.tweets_count;
 
         const userLabels = insights.top_users.map((user) => user.user);
-        const tweetCounts = insights.top_users.map((user) => user.tweet_count);
+        const tweetCounts = insights.top_users.map((user) => user.tweets_count);
 
         const ctx = document.getElementById("topUsersChart").getContext("2d");
 
@@ -131,19 +140,13 @@
           });
         }
 
-        insights.tweets_over_time = [
-          { date: "2023-01-01", tweet_count: 120 },
-          { date: "2023-01-02", tweet_count: 75 },
-          { date: "2023-01-03", tweet_count: 200 },
-          { date: "2023-01-04", tweet_count: 90 },
-          { date: "2023-01-05", tweet_count: 150 },
-          // ... more data ...
-        ];
-
-        if (insights.tweets_over_time && insights.tweets_over_time.length > 0) {
-          const dates = insights.tweets_over_time.map((entry) => entry.date);
-          const tweetCounts = insights.tweets_over_time.map(
-            (entry) => entry.tweet_count
+        if (
+          insights.tweets_distribution &&
+          insights.tweets_distribution.length > 0
+        ) {
+          const dates = insights.tweets_distribution.map((entry) => entry.date);
+          const tweetCounts = insights.tweets_distribution.map(
+            (entry) => entry.tweets_count
           );
 
           const ctxLine = document
@@ -227,11 +230,13 @@
         <p>Max Retweets: <span id="max_retweets"></span></p>
         <p>Total Tweets Count: <span id="tweets_count"></span></p>
       </div>
-      <div style="width: 600px; height: 600px; margin: auto; margin-top: 80px">
-        <canvas id="topUsersChart" width="400" height="400"></canvas>
-      </div>
-      <div style="width: 600px; height: 600px; margin: auto; margin-top: 80px">
-        <canvas id="tweetsOverTimeChart"></canvas>
+      <div class="charts-container">
+        <div class="chart" id="topUsersChartContainer">
+          <canvas id="topUsersChart"></canvas>
+        </div>
+        <div class="chart" id="tweetsOverTimeChartContainer">
+          <canvas id="tweetsOverTimeChart"></canvas>
+        </div>
       </div>
     </div>
   </body>
