@@ -32,16 +32,12 @@ object SparkApp {
       .as[String]
       .writeStream
       .foreachBatch { (batchDS: Dataset[String], batchId: Long) =>
-        // if (!batchDS.isEmpty) {
-          batchDS.collect().foreach { jsonQuery =>
-            val query = json_tuple($"value", "query").as("query")
-            val queryDF = batchDS.select(query).toDF("query")
-            val queryValue = queryDF.select($"query").first().getString(0)
-            currentFilterQuery = queryValue
-          }
-        // } else {
-        //   println("Received empty batch")
-        // }
+        batchDS.collect().foreach { jsonQuery =>
+          val query = json_tuple($"value", "query").as("query")
+          val queryDF = batchDS.select(query).toDF("query")
+          val queryValue = queryDF.select($"query").first().getString(0)
+          currentFilterQuery = queryValue
+        }
       }
       .start()
 
