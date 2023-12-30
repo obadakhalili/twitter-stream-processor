@@ -1,10 +1,14 @@
 import org.apache.log4j.{BasicConfigurator, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.Trigger
 
+
 object SparkApp {
+  @volatile var currentFilterQuery: String = ""
+
   def main(args: Array[String]): Unit = {
     Logger.getLogger("org").setLevel(org.apache.log4j.Level.ERROR)
     Logger.getLogger("akka").setLevel(org.apache.log4j.Level.ERROR)
@@ -17,6 +21,29 @@ object SparkApp {
       .getOrCreate()
 
     import spark.implicits._
+
+    val filterQueryStream = spark
+      .readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", "localhost:9092")
+      .option("subscribe", "tweets-filter-query")
+      .load()
+      .selectExpr("CAST(value AS STRING)")
+      .as[String]
+      .writeStream
+      .foreachBatch { (batchDS: Dataset[String], batchId: Long) =>
+        // if (!batchDS.isEmpty) {
+          batchDS.collect().foreach { jsonQuery =>
+            val query = json_tuple($"value", "query").as("query")
+            val queryDF = batchDS.select(query).toDF("query")
+            val queryValue = queryDF.select($"query").first().getString(0)
+            currentFilterQuery = queryValue
+          }
+        // } else {
+        //   println("Received empty batch")
+        // }
+      }
+      .start()
 
     val kafkaDF = spark
       .readStream
@@ -36,6 +63,15 @@ object SparkApp {
 
         val accumulatedDF = spark.read.parquet(storagePath)
 
+        val queryTokens = currentFilterQuery.split(",")
+        val tweetsDistribution = accumulatedDF
+          .filter(queryTokens.map(token => $"text".contains(token)).reduce(_ || _))
+          .groupBy("date")
+          .agg(count("id").alias("tweets_count"))
+          .orderBy("date")
+          .collect()
+          .map(row => (row.getString(0), row.getLong(1)))
+
         val avgRetweets = accumulatedDF.agg(avg($"retweets").as("avg_retweets"))
         val maxRetweets = accumulatedDF.agg(max($"retweets").as("max_retweets"))
         val tweetCount = accumulatedDF.agg(count($"id").as("tweets_count"))
@@ -45,13 +81,6 @@ object SparkApp {
           .agg(count("id").alias("tweets_count"))
           .orderBy(desc("tweets_count"))
           .limit(20)
-          .collect()
-          .map(row => (row.getString(0), row.getLong(1)))
-        
-        val tweetsDistribution = accumulatedDF
-          .groupBy("date")
-          .agg(count("id").alias("tweets_count"))
-          .orderBy("date")
           .collect()
           .map(row => (row.getString(0), row.getLong(1)))
 
@@ -70,5 +99,6 @@ object SparkApp {
       .start()
 
     reprocessQuery.awaitTermination()
+    filterQueryStream.awaitTermination()
   }
 }

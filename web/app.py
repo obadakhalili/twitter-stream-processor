@@ -1,8 +1,10 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 from pymongo import MongoClient
+from kafka import KafkaProducer
 import threading
 import time
+import json
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -10,6 +12,11 @@ socketio = SocketIO(app)
 client = MongoClient("mongodb://localhost:27017/")
 db = client["tweets_insights_db"]
 collection = db["tweets_insights"]
+
+kafka_producer = KafkaProducer(
+    bootstrap_servers=["localhost:9092"],
+    value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+)
 
 
 @app.route("/")
@@ -49,6 +56,11 @@ def send_insights():
 @socketio.on("connect")
 def test_connect(auth=None):
     send_insights()
+
+
+@socketio.on("tweets_filter_query")
+def handle_tweets_filter_query(query):
+    kafka_producer.send("tweets-filter-query", {"query": query})
 
 
 def update_insights():

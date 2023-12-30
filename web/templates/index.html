@@ -89,7 +89,61 @@
         width: 100% !important;
         height: auto !important;
       }
+
+      .tweet-query-form {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+
+      .tweet-query-form form {
+        display: inline-block;
+      }
+
+      .tweet-query-form input {
+        margin-right: 10px;
+      }
     </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <div id="branding">
+          <h1><span class="highlight">Tweet</span> Insights</h1>
+        </div>
+        <nav>
+          <ul>
+            <li class="current"><a href="#">Home</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="insights">
+        <h2>Twitter Data Analysis</h2>
+        <p>Average Retweets: <span id="avg_retweets"></span></p>
+        <p>Max Retweets: <span id="max_retweets"></span></p>
+        <p>Total Tweets Count: <span id="tweets_count"></span></p>
+      </div>
+      <div class="charts-container">
+        <div class="chart" id="topUsersChartContainer">
+          <canvas id="topUsersChart"></canvas>
+        </div>
+        <div class="chart" id="tweetsOverTimeChartContainer">
+          <div class="tweet-query-form">
+            <form id="tweetQueryForm">
+              <input
+                type="text"
+                id="queryInput"
+                placeholder="Enter keywords to filter tweets"
+              />
+              <button type="submit">Submit Query</button>
+            </form>
+          </div>
+          <canvas id="tweetsOverTimeChart"></canvas>
+        </div>
+      </div>
+    </div>
     <script type="text/javascript" charset="utf-8">
       const socket = io();
       let pieChart = null;
@@ -207,37 +261,14 @@
           () => `hsla(${Math.random() * 360}, 100%, 75%, 0.5)`
         );
       }
-    </script>
-  </head>
-  <body>
-    <header>
-      <div class="container">
-        <div id="branding">
-          <h1><span class="highlight">Tweet</span> Insights</h1>
-        </div>
-        <nav>
-          <ul>
-            <li class="current"><a href="#">Home</a></li>
-          </ul>
-        </nav>
-      </div>
-    </header>
 
-    <div class="container">
-      <div class="insights">
-        <h2>Twitter Data Analysis</h2>
-        <p>Average Retweets: <span id="avg_retweets"></span></p>
-        <p>Max Retweets: <span id="max_retweets"></span></p>
-        <p>Total Tweets Count: <span id="tweets_count"></span></p>
-      </div>
-      <div class="charts-container">
-        <div class="chart" id="topUsersChartContainer">
-          <canvas id="topUsersChart"></canvas>
-        </div>
-        <div class="chart" id="tweetsOverTimeChartContainer">
-          <canvas id="tweetsOverTimeChart"></canvas>
-        </div>
-      </div>
-    </div>
+      document
+        .getElementById("tweetQueryForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const query = document.getElementById("queryInput").value;
+          socket.emit("tweets_filter_query", query);
+        });
+    </script>
   </body>
 </html>
